@@ -184,11 +184,13 @@ const Index = () => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const fileData = e.target.result;
+        const CLAUDE_API_KEY = "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";
+
         const response = await fetch("https://api.anthropic.com/v1/complete", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-API-Key": process.env.REACT_APP_CLAUDE_API_KEY,
+            "X-API-Key": CLAUDE_API_KEY,
           },
           body: JSON.stringify({
             prompt: PROMPT.replace("{$ORDER_TEXT}", fileData),
@@ -202,7 +204,8 @@ const Index = () => {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to extract data from the Excel file");
+          const errorData = await response.json();
+          throw new Error(`API request failed with status ${response.status}: ${errorData.detail}`);
         }
 
         const data = await response.json();
@@ -216,7 +219,7 @@ const Index = () => {
       console.error("Error:", error);
       toast({
         title: "Error",
-        description: "Failed to extract data from the Excel file",
+        description: error.message,
         status: "error",
         duration: 5000,
         isClosable: true,
