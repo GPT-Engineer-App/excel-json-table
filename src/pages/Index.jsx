@@ -181,35 +181,37 @@ const Index = () => {
     if (!file) return;
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const fileData = e.target.result;
+        const response = await fetch("https://api.anthropic.com/v1/complete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-API-Key": process.env.REACT_APP_CLAUDE_API_KEY,
+          },
+          body: JSON.stringify({
+            prompt: PROMPT.replace("{$ORDER_TEXT}", fileData),
+            model: "claude-v1",
+            max_tokens_to_sample: 2000,
+            stop_sequences: ["\n\n"],
+            stream: false,
+            temperature: 0,
+            top_p: 1,
+          }),
+        });
 
-      const response = await fetch("https://api.anthropic.com/v1/complete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-Key": process.env.REACT_APP_CLAUDE_API_KEY,
-        },
-        body: JSON.stringify({
-          prompt: PROMPT,
-          model: "claude-v1",
-          max_tokens_to_sample: 2000,
-          stop_sequences: ["\n\n"],
-          stream: false,
-          temperature: 0,
-          top_p: 1,
-        }),
-      });
+        if (!response.ok) {
+          throw new Error("Failed to extract data from the Excel file");
+        }
 
-      if (!response.ok) {
-        throw new Error("Failed to extract data from the Excel file");
-      }
+        const data = await response.json();
+        const extractedData = JSON.parse(data.completion);
 
-      const data = await response.json();
-      const extractedData = JSON.parse(data.completion);
-
-      setExtractedData(extractedData.fields);
-      setCurrentPage(1);
+        setExtractedData(extractedData.fields);
+        setCurrentPage(1);
+      };
+      reader.readAsText(file);
     } catch (error) {
       console.error("Error:", error);
       toast({
